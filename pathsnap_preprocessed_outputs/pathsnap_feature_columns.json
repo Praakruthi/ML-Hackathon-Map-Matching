@@ -1,0 +1,16 @@
+{
+  "feature_columns": [
+    "distance_m",
+    "heading_diff_deg",
+    "speed_mps",
+    "relative_distance_m",
+    "connectivity"
+  ],
+  "metadata_columns": [
+    "trip_id",
+    "observation_id",
+    "timestamp",
+    "arc_id"
+  ],
+  "label_column": "label"
+}

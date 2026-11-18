@@ -12,6 +12,7 @@ MAX_GPS_POLYLINE_POINTS = 10_000
 def create_trip_map(
 	gps_observations: list[dict[str, Any]],
 	road_network: dict[str, Any] | None = None,
+	predicted_route: dict[str, Any] | None = None,
 ) -> folium.Map:
 	"""Build a map from [longitude, latitude] coordinates."""
 	if not gps_observations:
@@ -26,6 +27,7 @@ def create_trip_map(
 		sum(point[1] for point in map_coordinates) / len(map_coordinates),
 	]
 	trip_map = folium.Map(location=center, zoom_start=14, control_scale=True)
+	gps_layer = folium.FeatureGroup(name="Raw GPS trajectory")
 
 	polyline_stride = max(1, ceil(len(map_coordinates) / MAX_GPS_POLYLINE_POINTS))
 	polyline_points = map_coordinates[::polyline_stride]
@@ -37,7 +39,7 @@ def create_trip_map(
 		weight=4,
 		opacity=0.85,
 		tooltip="GPS trajectory",
-	).add_to(trip_map)
+	).add_to(gps_layer)
 
 	marker_stride = max(1, ceil(len(map_coordinates) / MAX_GPS_MARKERS))
 	marker_indices = set(range(0, len(map_coordinates), marker_stride))
@@ -51,7 +53,8 @@ def create_trip_map(
 			fill=True,
 			fill_opacity=0.9,
 			tooltip="Start" if index == 0 else "End" if index == len(map_coordinates) - 1 else f"GPS observation {index + 1}",
-		).add_to(trip_map)
+		).add_to(gps_layer)
+	gps_layer.add_to(trip_map)
 
 	if road_network:
 		nodes = {
@@ -74,6 +77,20 @@ def create_trip_map(
 				opacity=0.55,
 			).add_to(road_layer)
 		road_layer.add_to(trip_map)
-		folium.LayerControl(collapsed=True).add_to(trip_map)
+
+	if predicted_route and predicted_route.get("coordinates"):
+		route_points = [
+			[float(latitude), float(longitude)]
+			for longitude, latitude in predicted_route["coordinates"]
+		]
+		folium.PolyLine(
+			route_points,
+			color="#16805d",
+			weight=6,
+			opacity=0.9,
+			tooltip="Predicted road route",
+		).add_to(folium.FeatureGroup(name="Predicted road route").add_to(trip_map))
+
+	folium.LayerControl(collapsed=True).add_to(trip_map)
 
 	return trip_map

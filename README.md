@@ -1,8 +1,8 @@
-# ML-Hackathon-Map-Matching
+# RouteMatch AI - GPS Trajectory Map Matching and Route Reconstruction
 
 ## Project Overview
 
-This repository is the starting structure for a four-member machine learning hackathon project focused on GPS trajectory map matching. The project will organize data preparation, candidate generation, model experimentation, route reconstruction, and a user-facing demonstration. The initial repository contains configuration and placeholders only; no algorithms or application workflows have been implemented.
+RouteMatch AI is a four-member hackathon project for matching ordered GPS observations to a road network and reconstructing a connected route. The repository currently includes the FastAPI and Streamlit application foundation, dataset discovery, trip visualization, module adapter boundaries, and artifact-backed model/performance views. Prediction remains unavailable until the Member 1, 2, and 3 adapters are connected.
 
 ## Problem Domain
 
@@ -11,8 +11,8 @@ GPS trajectory map matching associates noisy, ordered GPS observations with the 
 ## Technology Stack
 
 - Python
-- FastAPI and Uvicorn for the proposed backend API
-- Streamlit, Folium, and Streamlit-Folium for the proposed interactive map interface
+- FastAPI and Uvicorn for the backend API
+- Streamlit, Folium, and Streamlit-Folium for the interactive map interface
 - NumPy, pandas, scikit-learn, SciPy, NetworkX, and joblib for data and modeling workflows
 - Matplotlib and Plotly for visualization
 - pytest for testing
@@ -46,17 +46,15 @@ ML-Hackathon-Map-Matching/
 │   ├── member2/__init__.py
 │   └── member3/__init__.py
 ├── backend/
-│   ├── main.py
-│   ├── api.py
-│   ├── config.py
-│   ├── services/.gitkeep
-│   ├── integrations/.gitkeep
-│   └── schemas/.gitkeep
+│   ├── main.py, api.py, config.py, api_errors.py
+│   ├── services/ (trip, module, model, performance, prediction)
+│   ├── integrations/ (member adapters, shared contracts, route serializer)
+│   └── schemas/ (typed API contracts)
 ├── frontend/
 │   ├── app.py
-│   ├── pages/.gitkeep
-│   ├── components/.gitkeep
-│   └── services/.gitkeep
+│   ├── pages/ (dashboard, dataset explorer, route prediction, performance)
+│   ├── components/ (Folium map visualization)
+│   └── services/ (backend API client)
 ├── models/
 │   └── README.md
 ├── outputs/
@@ -65,32 +63,57 @@ ML-Hackathon-Map-Matching/
 	└── .gitkeep
 ```
 
-## Installation
+## Installation (Windows CMD)
 
-Create and activate a virtual environment, then install the project dependencies:
+From the repository root, create and activate a virtual environment and install dependencies:
 
 ```bash
 python -m venv .venv
+.venv\Scripts\activate
+python -m pip install -r requirements.txt
 ```
 
-On Windows, activate it with `.venv\\Scripts\\activate`; on macOS or Linux, use `source .venv/bin/activate`. Then run:
+## Local Execution (Windows CMD)
+
+In the first terminal, start FastAPI:
 
 ```bash
-pip install -r requirements.txt
+set "BACKEND_HOST=127.0.0.1"
+set "BACKEND_PORT=8000"
+python -m backend.main
 ```
 
-## Execution
-
-Start the backend from the repository root:
+In a second terminal, start Streamlit:
 
 ```bash
-uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
+set "BACKEND_API_URL=http://127.0.0.1:8000"
+python -m streamlit run frontend/app.py
 ```
 
-In a second terminal, start the frontend:
+The backend must be running before the frontend can show a connected status. Swagger documentation is available at `http://127.0.0.1:8000/docs`.
+
+## Two-Laptop Execution
+
+On **Laptop A (backend)**, run `ipconfig` and note the active adapter's IPv4 address. Allow inbound TCP port 8000 on the private network in Windows Firewall. From the repository root, start the backend:
 
 ```bash
-streamlit run frontend/app.py
+set "BACKEND_HOST=0.0.0.0"
+set "BACKEND_PORT=8000"
+set "CORS_ORIGINS=http://localhost:8501,http://192.168.1.25:8501"
+python -m backend.main
 ```
 
-The backend must be started before the frontend for the connection status to show as connected. The backend URL defaults to `http://127.0.0.1:8000` and can be changed with the `BACKEND_API_URL` environment variable.
+Replace `192.168.1.25` with Laptop B's IPv4 address in `CORS_ORIGINS` if browser-origin requests are used. On **Laptop B (frontend)**, install the same project dependencies, set the backend laptop's address, allow inbound TCP port 8501 if accessing the UI from another device, and start Streamlit:
+
+```bash
+set "BACKEND_API_URL=http://192.168.1.20:8000"
+python -m streamlit run frontend/app.py --server.address 0.0.0.0 --server.port 8501
+```
+
+Replace `192.168.1.20` with Laptop A's IPv4 address. Open `http://<Laptop-B-IPv4>:8501` in a browser. Keep both laptops on a network that permits device-to-device traffic. `BACKEND_HOST`, `BACKEND_PORT`, `BACKEND_API_URL`, `CORS_ORIGINS`, `DATASET_ROOT`, `MODEL_DIRECTORY`, and `PERFORMANCE_RESULTS_PATH` are configurable through environment variables.
+
+## Prediction And Evaluation Status
+
+The prediction screen does not generate placeholder routes: it reports which adapters are missing until all three standardized integrations are connected. Model artifacts are inventoried without loading/deserializing them. Model-performance values are read only from a validated `outputs/performance.json` artifact; no metrics are currently present. Student-test reference routes are never used by prediction and test metrics remain blocked unless project rules and artifact provenance explicitly permit them.
+
+Adapter payloads and evaluation artifact fields are documented in [INTEGRATION_CONTRACT.md](INTEGRATION_CONTRACT.md).

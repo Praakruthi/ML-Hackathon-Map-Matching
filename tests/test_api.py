@@ -6,8 +6,10 @@ import pytest
 from fastapi.testclient import TestClient
 
 from backend.config import settings
-from backend.main import app
+from backend.main import app, run_backend
 from backend.services.trip_service import TripService
+from backend.services.model_service import ModelService
+from backend.services.performance_service import PerformanceService
 
 
 def write_trip(
@@ -149,3 +151,96 @@ def test_get_trip_returns_not_found_when_required_file_is_missing(
     )
 
     assert response.status_code == 404
+
+
+def test_module_status_reports_pipeline_not_ready(api_client: TestClient) -> None:
+    response = api_client.get("/modules/status")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["pipeline_ready"] is False
+    assert {module["name"] for module in payload["modules"]} == {
+        "Member 1 - Data Engineering",
+        "Member 2 - Machine Learning",
+        "Member 3 - HMM and Route Reconstruction",
+    }
+    assert all(not module["ready"] for module in payload["modules"])
+
+
+def test_models_endpoint_lists_artifacts_without_loading_them(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    artifact = tmp_path / "model.joblib"
+    artifact.write_bytes(b"not deserialized")
+    monkeypatch.setattr("backend.api.model_service", ModelService(tmp_path))
+
+    response = TestClient(app).get("/models")
+
+    assert response.status_code == 200
+    assert response.json()["models"][0]["filename"] == "model.joblib"
+
+
+def test_performance_endpoint_returns_empty_without_results(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        "backend.api.performance_service",
+        PerformanceService(tmp_path / "missing.json"),
+    )
+
+    response = TestClient(app).get("/models/performance")
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "empty"
+    assert response.json()["models"] == []
+
+
+def test_prediction_validates_trip_before_reporting_pipeline_unavailable(
+    api_client: TestClient,
+) -> None:
+    invalid_trip = api_client.post(
+        "/predict/does-not-exist",
+        json={"dataset_category": "train"},
+    )
+    unavailable = api_client.post(
+        "/predict/training-trip-new",
+        json={"dataset_category": "train"},
+    )
+
+    assert invalid_trip.status_code == 404
+    assert invalid_trip.json()["error"]["code"] == "trip_not_found"
+    assert unavailable.status_code == 503
+    assert unavailable.json()["error"]["code"] == "prediction_unavailable"
+    assert unavailable.json()["error"]["context"]["modules"]
+
+
+def test_prediction_rejects_invalid_dataset_category(api_client: TestClient) -> None:
+    response = api_client.post(
+        "/predict/training-trip-new",
+        json={"dataset_category": "student"},
+    )
+
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "request_validation_error"
+
+
+def test_backend_launcher_uses_configured_bind_address(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, object] = {}
+
+    def fake_run(app_path: str, **kwargs: object) -> None:
+        captured["app_path"] = app_path
+        captured.update(kwargs)
+
+    monkeypatch.setattr("uvicorn.run", fake_run)
+    run_backend()
+
+    assert captured == {
+        "app_path": "backend.main:app",
+        "host": settings.backend_host,
+        "port": settings.backend_port,
+        "reload": True,
+    }

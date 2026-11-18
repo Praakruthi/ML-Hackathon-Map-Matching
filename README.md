@@ -67,12 +67,30 @@ ML-Hackathon-Map-Matching/
 
 ## Installation
 
-Installation instructions are a placeholder until the team confirms its development environment. The initial dependencies are listed in `requirements.txt`.
+Create and activate a virtual environment, then install the project dependencies:
 
 ```bash
 python -m venv .venv
 ```
 
+On Windows, activate it with `.venv\\Scripts\\activate`; on macOS or Linux, use `source .venv/bin/activate`. Then run:
+
+```bash
+pip install -r requirements.txt
+```
+
 ## Execution
 
-Execution instructions are a placeholder. The backend and frontend entry-point files are intentionally empty except for module docstrings, so there is no runnable application yet.
+Start the backend from the repository root:
+
+```bash
+uvicorn backend.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+In a second terminal, start the frontend:
+
+```bash
+streamlit run frontend/app.py
+```
+
+The backend must be started before the frontend for the connection status to show as connected. The backend URL defaults to `http://127.0.0.1:8000` and can be changed with the `BACKEND_API_URL` environment variable.

@@ -1,0 +1,16 @@
+fastapi
+uvicorn[standard]
+streamlit
+streamlit-folium
+folium
+requests
+pydantic
+pandas
+numpy
+scikit-learn
+networkx
+scipy
+matplotlib
+plotly
+joblib
+pytest

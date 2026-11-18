@@ -199,6 +199,39 @@ cython_debug/
 #   Learn more at https://abstra.io/docs
 .abstra/
 
+# Project-specific rules
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Secrets
+.env
+.env.*
+
+# OS / IDE
+.DS_Store
+.vscode/
+
+# Dataset
+data/*
+!data/README.md
+
+# Generated outputs
+outputs/*
+!outputs/README.md
+
+# Temporary files
+*.log
+
 # Visual Studio Code
 #   Visual Studio Code specific template is maintained in a separate VisualStudioCode.gitignore that
 #   can be found at https://github.com/github/gitignore/blob/main/Global/VisualStudioCode.gitignore

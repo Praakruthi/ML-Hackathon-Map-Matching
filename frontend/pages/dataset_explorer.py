@@ -78,7 +78,7 @@ def render_dataset_explorer() -> None:
 			}
 			for point in observations
 		],
-		use_container_width=True,
+		width="stretch",
 		height=240,
 	)
 	st.caption(
